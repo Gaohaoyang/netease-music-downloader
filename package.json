@@ -1,6 +1,6 @@
 {
   "name": "netease-music-downloader",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Download music from NetEase Cloud Music",
   "main": "dist/index.js",
   "bin": {
