@@ -42,6 +42,16 @@ npx netease-music-downloader download 426832090 --auto-proxy
 
 # 使用手动代理下载
 npx netease-music-downloader download 426832090 --proxy http://127.0.0.1:7890
+
+# 下载歌单（ID 或 URL；私密歌单需先保存 Cookie）
+npx netease-music-downloader playlist 3778678
+
+# 重复运行即可续传：歌单文件夹中已有的歌曲会被跳过（不会发起网络请求）。
+# 加上 --force 可重新下载全部歌曲。
+npx netease-music-downloader playlist 3778678 --force
+
+# 仅下载歌单歌词
+npx netease-music-downloader playlist-lyrics 3778678
 ```
 
 <!--
@@ -146,6 +156,66 @@ pnpm start album 34836039 --proxy http://127.0.0.1:7890
 ```
 
 注意：使用手动代理时，建议使用 `http://` 而不是 `https://` 作为代理地址的协议，因为某些代理服务器可能不能正确支持 HTTPS 连接。
+
+## 元数据标签
+
+`download`、`album` 和 `playlist` 会自动把标签写入每个文件：标题、歌手、专辑、年份、曲目号、封面和内嵌歌词（专辑下载还会写入专辑艺人和总曲目数）。使用全局选项 `--no-tags` 可关闭。写入失败只会提示警告，不会导致下载失败。
+
+### 为已下载的文件补全标签
+
+对文件夹运行 `tag`。程序会按文件名（`01.歌手-歌名.mp3`、`歌手-歌名.mp3` 或 `歌名.mp3`）在网易云搜索，综合标题、歌手和时长选择最佳匹配，然后写入标签和封面。同名的 `.lrc` 会作为歌词内嵌。
+
+```bash
+# 只预览匹配结果，不修改文件
+npx netease-music-downloader tag "./downloads/我的歌单" --dry-run
+
+# 写入标签（包含子文件夹；已有标签的文件会跳过）
+npx netease-music-downloader tag "./downloads/我的歌单"
+
+# 选项：--force（覆盖已有标签）、--min-score 0.8（更严格）、--no-recursive
+```
+
+没有合适匹配的文件会记录在文件夹内的 `tag-problems.txt`。由于是按名称匹配，可能出现少量误匹配（翻唱、现场版等），建议先使用 `--dry-run`，必要时提高 `--min-score`。
+
+## 使用登录 Cookie（VIP / 付费歌曲）
+
+默认以游客身份访问网易云，VIP 专属或付费歌曲可能因“无下载链接”而失败。你可以提供自己的登录 Cookie。
+
+### 如何获取 `MUSIC_U`
+
+1. 在浏览器中登录 <https://music.163.com>。
+2. 打开开发者工具（`F12`）→ **Application（应用）**（Chrome/Edge）或 **Storage（存储）**（Firefox）→ **Cookies** → `https://music.163.com`。
+3. 复制名为 `MUSIC_U` 的 Cookie 的 **Value（值）**。
+
+### 一次保存，长期使用（推荐）
+
+```bash
+npx netease-music-downloader cookie set "<MUSIC_U 的值>"   # 保存到 ~/.netease-music-downloader/cookie
+npx netease-music-downloader cookie show                   # 仅显示状态，不会打印内容
+npx netease-music-downloader cookie status   # 向网易云查询：是否登录？是否VIP？到期时间
+npx netease-music-downloader cookie clear                  # 删除
+```
+
+之后所有命令（download / album / lyrics / album-lyrics）都会自动使用已保存的 Cookie。`--cookie` 与下方环境变量可在单次运行中临时覆盖。可通过 `NETEASE_CONFIG_DIR` 修改存储目录。
+
+### 临时使用
+
+```bash
+# 全局选项，适用于 download / album / lyrics / album-lyrics
+npx netease-music-downloader --cookie "<MUSIC_U 的值>" download 1234567
+
+# 也支持完整 Cookie 字符串（包含 "=" 即视为完整字符串）
+npx netease-music-downloader --cookie "MUSIC_U=xxx; __csrf=yyy" album 12345
+
+# 或使用环境变量（--cookie 优先级更高）
+# PowerShell: $env:NETEASE_MUSIC_U = "<MUSIC_U 的值>"
+export NETEASE_MUSIC_U="<MUSIC_U 的值>"   # 或 NETEASE_COOKIE
+npx netease-music-downloader download 1234567
+```
+
+仅提供值时会自动包装为 `MUSIC_U=<值>`；游客的 `NMTID` / `_ntes_nuid` 仅在缺失时补充。
+
+> ⚠️ **请妥善保管 Cookie。** 已保存的 Cookie 文件为明文存储（Unix 下权限为 600），请保护好你的用户目录。 `MUSIC_U` 可访问你的账号，切勿分享、提交到仓库，或贴到公开 Issue/日志中。本工具不会打印它。建议使用环境变量以避免留在命令历史中；若泄露，请退出并重新登录以使其失效。
 
 ## 注意事项
 

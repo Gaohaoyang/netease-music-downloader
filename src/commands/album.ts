@@ -1,9 +1,10 @@
 import { createMultiBar } from '../utils/progress';
-import { getAlbumInfo, checkSongAvailabilityWithRetry, getLyrics, proxyConfig } from '../services/netease';
+import { getAlbumInfo, checkSongAvailabilityWithRetry, getLyrics, proxyConfig, formatUnavailableHelp } from '../services/netease';
 import { sanitizeFileName, getDownloadPath } from '../utils/file';
 import axios from 'axios';
 import * as fs from 'fs';
 import { Octokit } from '@octokit/rest';
+import { tagFile } from '../services/tagger';
 
 async function downloadImage(url: string): Promise<Buffer | null> {
   try {
@@ -70,8 +71,8 @@ export async function downloadAlbum(albumId: string, issueNumber?: number, optio
 
         const availability = await checkSongAvailabilityWithRetry(song.id, options?.autoProxy);
         if (!availability.available || !availability.url) {
-          console.log(`\n[${i + 1}/${songs.length}] ${displayName} (歌曲已下架或无版权，跳过下载 Song is unavailable or no copyright, skipping download)`);
-          downloadResults.skipped.push(`${displayName} (无版权或已下架)`);
+          console.log(`\n[${i + 1}/${songs.length}] ${displayName} 无法获取下载链接，跳过下载 Cannot get download URL, skipping download\n${formatUnavailableHelp(availability.reason, options?.autoProxy)}`);
+          downloadResults.skipped.push(`${displayName} (${availability.reason || '无法获取下载链接 Cannot get download URL'})`);
           i++;
           continue;
         }
@@ -131,6 +132,14 @@ export async function downloadAlbum(albumId: string, issueNumber?: number, optio
         });
 
         progressBar.update(Math.round(totalLength/1024));
+
+        await tagFile(filePath, {
+          song,
+          albumArtist: albumInfo.artistName,
+          trackNumber: song.trackNumber || i + 1,
+          trackTotal: songs.length,
+          lyrics
+        });
 
         downloadResults.success.push(displayName);
         i++;

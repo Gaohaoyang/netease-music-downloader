@@ -44,6 +44,16 @@ npx netease-music-downloader download 426832090 --auto-proxy
 
 # Download with manual proxy
 npx netease-music-downloader download 426832090 --proxy http://127.0.0.1:7890
+
+# Download a playlist (ID or URL; private playlists need a saved cookie)
+npx netease-music-downloader playlist 3778678
+
+# Re-running a playlist resumes it: songs already in the playlist folder are skipped
+# (no network requests for them). Add --force to re-download everything.
+npx netease-music-downloader playlist 3778678 --force
+
+# Download lyrics only for a playlist
+npx netease-music-downloader playlist-lyrics 3778678
 ```
 
 <!--
@@ -148,6 +158,66 @@ pnpm start album 34836039 --proxy http://127.0.0.1:7890
 ```
 
 Note: When using a manual proxy, prefer using `http://` instead of `https://` for the proxy URL, as some proxy servers may not properly support HTTPS connections.
+
+## Metadata Tags
+
+`download`, `album` and `playlist` automatically write ID3/Vorbis/MP4 tags into each file: title, artist(s), album, year, track number, cover art and embedded lyrics (album downloads also set album artist and track total). Use the global `--no-tags` option to turn this off. Tagging failures only print a warning and never fail the download.
+
+### Tag files you already downloaded
+
+Point `tag` at a folder. Each audio file is searched on NetEase by its file name (`01.Artist-Title.mp3`, `Artist-Title.mp3` or just `Title.mp3`), the best match is chosen (title, artist and duration are compared), and the tags and cover are filled in. A sibling `.lrc` file is embedded as lyrics.
+
+```bash
+# Preview matches without changing any file
+npx netease-music-downloader tag "./downloads/My Playlist" --dry-run
+
+# Write tags (sub-folders included; files that already have tags are skipped)
+npx netease-music-downloader tag "./downloads/My Playlist"
+
+# Options: --force (overwrite existing tags), --min-score 0.8 (stricter), --no-recursive
+```
+
+Files with no good match are listed in `tag-problems.txt` inside the folder. Matching is by name, so a few wrong matches (covers, live versions) are possible; use `--dry-run` first and raise `--min-score` if needed.
+
+## Using a Login Cookie (VIP / Paid Songs)
+
+By default the tool accesses NetEase as a guest, so VIP-only or paid songs may fail with "no download URL". You can supply your own login cookie.
+
+### How to get `MUSIC_U`
+
+1. Log in at <https://music.163.com> in your browser.
+2. Open DevTools (`F12`) → **Application** (Chrome/Edge) or **Storage** (Firefox) → **Cookies** → `https://music.163.com`.
+3. Copy the **Value** of the cookie named `MUSIC_U`.
+
+### Save the cookie once (recommended)
+
+```bash
+npx netease-music-downloader cookie set "<MUSIC_U value>"   # saved to ~/.netease-music-downloader/cookie
+npx netease-music-downloader cookie show                    # status only, value is never printed
+npx netease-music-downloader cookie status   # ask NetEase: logged in? VIP? expiry
+npx netease-music-downloader cookie clear                   # remove it
+```
+
+Every later command (download / album / lyrics / album-lyrics) automatically uses the saved cookie. `--cookie` and the env vars below override it for a single run. Set `NETEASE_CONFIG_DIR` to change the storage directory.
+
+### One-off usage
+
+```bash
+# Global option, works with download / album / lyrics / album-lyrics
+npx netease-music-downloader --cookie "<MUSIC_U value>" download 1234567
+
+# A full cookie string (anything containing "=") is also accepted
+npx netease-music-downloader --cookie "MUSIC_U=xxx; __csrf=yyy" album 12345
+
+# Or use environment variables (--cookie takes precedence)
+# PowerShell: $env:NETEASE_MUSIC_U = "<MUSIC_U value>"
+export NETEASE_MUSIC_U="<MUSIC_U value>"   # or NETEASE_COOKIE
+npx netease-music-downloader download 1234567
+```
+
+A bare value is wrapped as `MUSIC_U=<value>`; the guest `NMTID` / `_ntes_nuid` cookies are added only when absent.
+
+> ⚠️ **Keep your cookie secret.** The saved cookie file is stored in plain text (mode 600 on Unix); protect your home directory. `MUSIC_U` grants access to your account. Never share it, commit it, or paste it into public issues/logs. The tool never prints it. Prefer environment variables over shell history, and log out / re-login to revoke it if leaked.
 
 ## Notes
 

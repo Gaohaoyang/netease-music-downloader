@@ -1,10 +1,10 @@
 import { SingleBar, type Options } from 'cli-progress';
 import axios from 'axios';
 import * as fs from 'fs';
-import { getSongInfo, checkSongAvailabilityWithRetry, getLyrics, proxyConfig } from '../services/netease';
-import { getAutoProxy } from '../services/proxy';
+import { getSongInfo, checkSongAvailabilityWithRetry, getLyrics, proxyConfig, formatUnavailableHelp } from '../services/netease';
 import { sanitizeFileName, getDownloadPath } from '../utils/file';
 import { createSingleBar } from '../utils/progress';
+import { tagFile } from '../services/tagger';
 
 async function downloadImage(url: string): Promise<Buffer | null> {
   try {
@@ -42,7 +42,7 @@ export async function downloadSong(id: string, progressBar?: SingleBar, options?
 
       const availability = await checkSongAvailabilityWithRetry(id, options?.autoProxy);
       if (!availability.available || !availability.url) {
-        console.log(`歌曲已下架或无版权，跳过下载\nSong is unavailable or no copyright, skipping download`);
+        console.log(`无法获取下载链接，跳过下载 Cannot get download URL, skipping download\n${formatUnavailableHelp(availability.reason, options?.autoProxy)}`);
         return false;
       }
 
@@ -114,6 +114,9 @@ export async function downloadSong(id: string, progressBar?: SingleBar, options?
           clearInterval(checkProgress);
           bar.stop();
           if (downloadedBytes >= totalLength * 0.99) { // 允许1%的误差
+            if (await tagFile(filePath, { song, lyrics })) {
+              console.log('元数据已写入 Tags written');
+            }
             console.log(`\n下载完成 Download completed: ${fileName}`);
             resolve(true);
           } else {
@@ -148,10 +151,6 @@ export async function downloadSong(id: string, progressBar?: SingleBar, options?
     retryCount++;
     if (retryCount < MAX_RETRIES) {
       console.log(`\n第 ${retryCount}/${MAX_RETRIES} 次重试 Retry ${retryCount}/${MAX_RETRIES}`);
-      if (options?.autoProxy) {
-        console.log('重新获取代理列表 Updating proxy list...');
-        await getAutoProxy(true); // 强制更新代理列表
-      }
     }
   }
 

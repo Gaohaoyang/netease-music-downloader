@@ -10,6 +10,7 @@ export interface Song {
   };
   duration?: number;
   publishTime?: number;
+  trackNumber?: number;
 }
 
 export interface AlbumInfo {
@@ -18,4 +19,11 @@ export interface AlbumInfo {
   artistName: string;
   picUrl?: string;
   publishTime?: number;
+}
+
+export interface PlaylistInfo {
+  songs: Song[];
+  playlistName: string;
+  creatorName: string;
+  picUrl?: string;
 }

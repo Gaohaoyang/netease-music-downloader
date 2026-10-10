@@ -38,6 +38,7 @@
   "license": "MIT",
   "scripts": {
     "start": "ts-node src/index.ts",
+    "cookie": "ts-node src/index.ts cookie",
     "build": "tsc",
     "dev": "ts-node-dev --respawn src/index.ts",
     "prepare": "npm run build"
@@ -49,7 +50,8 @@
     "cheerio": "^1.0.0-rc.12",
     "cli-progress": "^3.12.0",
     "commander": "^12.0.0",
-    "glob": "^10.3.10"
+    "glob": "^10.3.10",
+    "node-taglib-sharp": "^6.0.3"
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.5",

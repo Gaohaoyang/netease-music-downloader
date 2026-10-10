@@ -33,3 +33,9 @@ pids
 # Build output
 dist/
 build/
+
+# Saved login cookie must never be committed (normally lives in ~/.netease-music-downloader)
+cookie
+.cookie
+*.cookie
+.netease-music-downloader/
